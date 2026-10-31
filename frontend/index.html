@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinPulse AI | Institutional Crypto Terminal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <header class="top-nav">
+        <div class="logo">
+            <span class="logo-icon">⚡</span>
+            <h1>FinPulse <span class="highlight">AI</span> <span class="tag">PRO</span></h1>
+        </div>
+        
+        <div class="ticker-marquee">
+            <div id="liveTickerInfo" class="marquee-content">
+                <span class="ticker-item">Initializing Data Streams...</span>
+            </div>
+        </div>
+
+        <div class="system-health">
+            <div class="health-item">
+                <span class="health-indicator online"></span>
+                <span>Backend: <strong id="backendStatus">ONLINE</strong></span>
+            </div>
+            <div class="health-item">
+                <span>Model: <strong id="modelStatus">FinBERT / PyTorch</strong></span>
+            </div>
+            <div class="health-item">
+                <span id="apiLatency">Latency: -- ms</span>
+            </div>
+            <div class="health-item">
+                <span id="inferenceSpeed">Inference: ~14ms</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-wrapper">
+        <!-- LEFT COLUMN: Asset Picker & Core Metrics -->
+        <aside class="left-col">
+            <div class="panel asset-picker-panel">
+                <h2>Asset Selection</h2>
+                <div class="search-box">
+                    <select id="tickerSelect" onchange="runAnalysis()">
+                        <option value="BTC-USD">Bitcoin (BTC-USD)</option>
+                        <option value="ETH-USD">Ethereum (ETH-USD)</option>
+                        <option value="SOL-USD">Solana (SOL-USD)</option>
+                        <option value="BNB-USD">Binance Coin (BNB-USD)</option>
+                        <option value="XRP-USD">Ripple (XRP-USD)</option>
+                    </select>
+                    <button id="runBtn" onclick="runAnalysis()">Run Engine</button>
+                </div>
+            </div>
+
+            <div class="panel metric-panel">
+                <h3>Live Market Price</h3>
+                <div class="value mono" id="currentPrice">$0.00</div>
+            </div>
+
+            <div class="panel metric-panel highlight-panel">
+                <h3>Bi-LSTM Neural Forecast</h3>
+                <div class="value mono" id="predictedPrice">$0.00</div>
+                <div class="badge-container">
+                    <span class="badge" id="directionBadge">NEUTRAL</span>
+                </div>
+            </div>
+            
+            <div class="panel metric-panel">
+                <h3>Expected Target Change</h3>
+                <div class="value mono" id="expectedChange">0.00%</div>
+            </div>
+
+            <div class="panel ticker-stats-panel">
+                <h2>24H Statistics</h2>
+                <div class="stat-row">
+                    <span class="stat-label">24h High</span>
+                    <span class="stat-val mono" id="statHigh">$0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">24h Low</span>
+                    <span class="stat-val mono" id="statLow">$0.00</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Est. Volatility</span>
+                    <span class="stat-val mono" id="statVolatility">±1.8%</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER COLUMN: Primary Chart & AI Brief -->
+        <main class="center-col">
+            <div class="panel chart-panel">
+                <div class="chart-header">
+                    <div class="chart-title-group">
+                        <h2>Price Action & Forecast Model</h2>
+                        <span class="chart-subtitle">
+                            <span style="color: #3B82F6">■ Current/Prev Status (Historical)</span> | 
+                            <span style="color: #00F090">■ Predicted Status (Bi-LSTM Area)</span>
+                        </span>
+                    </div>
+                    <div class="chart-controls" id="intervalControls">
+                        <button class="interval-btn" onclick="changeInterval('1H', this)">1H</button>
+                        <button class="interval-btn" onclick="changeInterval('24H', this)">24H</button>
+                        <button class="interval-btn active" onclick="changeInterval('7D', this)">7D</button>
+                        <button class="interval-btn" onclick="changeInterval('1M', this)">1M</button>
+                    </div>
+                </div>
+                <div id="tvChart" class="tv-chart-container"></div>
+                <div id="chartTooltip" class="chart-tooltip hidden"></div>
+                
+                <div class="loader-overlay hidden" id="loader">
+                    <div class="spinner"></div>
+                    <div>Processing Bi-LSTM & FinBERT Tensors...</div>
+                </div>
+            </div>
+            
+            <div class="panel analyst-panel">
+                <h3>🤖 LLM Intelligence Brief (Groq GPT OSS 20B)</h3>
+                <div id="analystReport" class="report-content">
+                    Select an asset to generate automated multi-factor intelligence report...
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT COLUMN: Sentiment Breakdown & Drivers -->
+        <aside class="right-col">
+            <div class="panel sentiment-panel">
+                <h2>FinBERT Sentiment Breakdown</h2>
+                <div class="gauge-container">
+                    <div class="sentiment-score-box">
+                        <span class="value mono" id="sentimentScore">0.00</span>
+                        <span class="sentiment-scale">Score (-1.0 to +1.0)</span>
+                    </div>
+                    <div class="polarity-badge" id="sentimentPolarity">NEUTRAL</div>
+                </div>
+                <div class="sentiment-bar-wrapper">
+                    <div class="sentiment-bar-fill" id="sentimentBarFill" style="width: 50%;"></div>
+                </div>
+            </div>
+
+            <div class="panel drivers-panel">
+                <h2>Market Drivers & On-Chain Metrics</h2>
+                <div class="driver-item">
+                    <div class="driver-info">
+                        <span class="driver-label">Fear & Greed Index</span>
+                        <span class="driver-sub" id="fearGreedStatus">Neutral</span>
+                    </div>
+                    <span class="driver-val mono" id="fearGreedScore">0.00</span>
+                </div>
+                <div class="driver-item">
+                    <div class="driver-info">
+                        <span class="driver-label">Network Gas Metric</span>
+                        <span class="driver-sub">Etherscan Normalized</span>
+                    </div>
+                    <span class="driver-val mono" id="gasMetric">0.00</span>
+                </div>
+            </div>
+
+            <div class="panel news-panel">
+                <h2>Top FinBERT Parsed Headlines</h2>
+                <ul id="newsList" class="news-list">
+                    <li class="empty-state">No news feed active.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
